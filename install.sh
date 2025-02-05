@@ -87,8 +87,11 @@ function system_check() {
     INS="yum install -y"
     ${INS} wget
     wget -N -P /etc/yum.repos.d/ https://raw.githubusercontent.com/wulabing/Xray_onekey/${github_branch}/basic/nginx.repo
-
-
+  elif [[ "${ID}" == "almalinux" ]]; then
+    print_ok "当前系统为 AlmaLinux ${VERSION_ID} ${VERSION}"
+    INS="yum install -y"
+    ${INS} wget
+    wget -N -P /etc/yum.repos.d/ https://raw.githubusercontent.com/wulabing/Xray_onekey/${github_branch}/basic/nginx.repo
   elif [[ "${ID}" == "ol" ]]; then
     print_ok "当前系统为 Oracle Linux ${VERSION_ID} ${VERSION}"
     INS="yum install -y"
@@ -160,14 +163,15 @@ function dependency_install() {
   ${INS} lsof tar
   judge "安装 lsof tar"
 
-  if [[ "${ID}" == "centos" || "${ID}" == "ol" ]]; then
-    ${INS} crontabs
+  # 修改 dependency_install 中的 crontab 安装（约第193行）
+  if [[ "${ID}" == "centos" || "${ID}" == "ol" || "${ID}" == "almalinux" ]]; then
+      ${INS} crontabs
   else
-    ${INS} cron
+      ${INS} cron
   fi
   judge "安装 crontab"
 
-  if [[ "${ID}" == "centos" || "${ID}" == "ol" ]]; then
+  if [[ "${ID}" == "centos" || "${ID}" == "ol" || "${ID}" == "almalinux"  ]]; then
     touch /var/spool/cron/root && chmod 600 /var/spool/cron/root
     systemctl start crond && systemctl enable crond
   else
@@ -195,7 +199,7 @@ function dependency_install() {
   #  fi
   #  judge "编译工具包 安装"
 
-  if [[ "${ID}" == "centos" ]]; then
+  if [[ "${ID}" == "centos"  || "${ID}" == "almalinux" ]]; then
     ${INS} pcre pcre-devel zlib-devel epel-release openssl openssl-devel
   elif [[ "${ID}" == "ol" ]]; then
     ${INS} pcre pcre-devel zlib-devel openssl openssl-devel
@@ -225,7 +229,7 @@ function basic_optimization() {
   echo '* hard nofile 65536' >>/etc/security/limits.conf
 
   # RedHat 系发行版关闭 SELinux
-  if [[ "${ID}" == "centos" || "${ID}" == "ol" ]]; then
+  if [[ "${ID}" == "centos" || "${ID}" == "ol" || "${ID}" == "almalinux" ]]; then
     sed -i 's/^SELINUX=.*/SELINUX=disabled/' /etc/selinux/config
     setenforce 0
   fi
