@@ -83,7 +83,14 @@ judge() {
 function system_check() {
   source '/etc/os-release'
 
-  if [[ "${ID}" == "centos" && ${VERSION_ID} -ge 7 ]]; then
+  if [[ "${ID}" == "almalinux" ]]; then
+    compatible_nginx_conf="no"
+    print_ok "当前系统为 AlmaLinux ${VERSION_ID} ${VERSION}"
+    INS="yum install -y"
+    ${INS} wget
+    wget -N -P /etc/yum.repos.d/ https://raw.githubusercontent.com/wulabing/Xray_onekey/${github_branch}/basic/nginx.repo
+
+  elif [[ "${ID}" == "centos" && ${VERSION_ID} -ge 7 ]]; then
     if [[ ${VERSION_ID} -ge 8 ]]; then
       compatible_nginx_conf="no"
     else
@@ -172,17 +179,25 @@ function nginx_install() {
   mkdir -p /etc/nginx/conf.d >/dev/null 2>&1
 }
 function dependency_install() {
-  ${INS} wget lsof tar bind9-dnsutils
+  ${INS} wget lsof tar
+
+  if [[ "${ID}" == "centos" || "${ID}" == "ol"  || "${ID}" == "almalinux" ]]; then
+    ${INS} bind-utils
+  else
+    ${INS} bind9-dnsutils
+  fi
+
+
   judge "安装 wget lsof tar"
 
-  if [[ "${ID}" == "centos" || "${ID}" == "ol" ]]; then
+  if [[ "${ID}" == "centos" || "${ID}" == "ol"  || "${ID}" == "almalinux" ]]; then
     ${INS} crontabs
   else
     ${INS} cron
   fi
   judge "安装 crontab"
 
-  if [[ "${ID}" == "centos" || "${ID}" == "ol" ]]; then
+  if [[ "${ID}" == "centos" || "${ID}" == "ol"  || "${ID}" == "almalinux" ]]; then
     touch /var/spool/cron/root && chmod 600 /var/spool/cron/root
     systemctl start crond && systemctl enable crond
   else
@@ -210,7 +225,7 @@ function dependency_install() {
   #  fi
   #  judge "编译工具包 安装"
 
-  if [[ "${ID}" == "centos" ]]; then
+  if [[ "${ID}" == "centos" || "${ID}" == "almalinux" ]]; then
     ${INS} pcre pcre-devel zlib-devel epel-release openssl openssl-devel
   elif [[ "${ID}" == "ol" ]]; then
     ${INS} pcre pcre-devel zlib-devel openssl openssl-devel
@@ -240,7 +255,7 @@ function basic_optimization() {
   echo '* hard nofile 65536' >>/etc/security/limits.conf
 
   # 关闭 Selinux
-  if [[ "${ID}" == "centos" || "${ID}" == "ol" ]]; then
+  if [[ "${ID}" == "centos" || "${ID}" == "ol" || "${ID}" == "almalinux" ]]; then
     sed -i 's/^SELINUX=.*/SELINUX=disabled/' /etc/selinux/config
     setenforce 0
   fi
